@@ -113,9 +113,6 @@ const HomePage: React.FC = () => {
   }
 
   const onPaginationChange = (current: number, pageSize: number, sortIndex: number) => {
-    if(filter.sortIndex !== sortIndex){
-       current = paginatorConfig.pagination.defaultCurrent
-    }
     setQueryParams(searchParams, { sortIndex: sortIndex, count: pageSize, page: current })
     setSearchParams(searchParams)
   };

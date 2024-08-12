@@ -17,8 +17,11 @@ const AdvertTable: React.FC<AdvertTableProps> = ({onEdit, loading, adverts = [],
         window.scrollTo(0, 0)
     }
 
-    const onSortChange = (sortIndex: number) => {
-        onChange(page, pageSize, sortIndex)
+    const onSortChange = (index: number) => {
+        if(index !== sortIndex ){
+            page = paginatorConfig.pagination.defaultCurrent;
+        }
+        onChange(page, pageSize, index)
     }
 
     const getTitle = (): string => {
