@@ -10,7 +10,7 @@ import { SmileOutlined } from '@ant-design/icons';
 import { cityService } from '../../../services/cityService';
 import { CityModel } from '../../../models/CityModel';
 import { advertService } from '../../../services/advertService';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import user from '../../../stores/UserStore'
 import { FilterData, TreeElement } from '../../../models/Models';
 import Filters from '../../filters';
@@ -21,12 +21,8 @@ import Error from '../../Error'
 import { filterService } from '../../../services/filterService';
 import { imagesUrl } from '../../../helpers/constants';
 import { ImageModel } from '../../../models/ImageModel';
-import { useForm } from 'antd/es/form/Form';
-
-
 
 const CreateAdvert: React.FC = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const id = Number(searchParams.get("id"))
@@ -49,9 +45,38 @@ const CreateAdvert: React.FC = () => {
         setTreeElements(elements);
       }
       if (!isNaN(id) && id !== 0) {
-        await setAdvertData();
+        const [images, filters, advert] = await Promise.all([
+          advertService.getImages(id),
+          filterService.getAdvertFilterValues(id),
+          advertService.getById(id),
+        ]);
+
+        if (advert.status === 200) {
+          setEditAdvert(advert.data)
+          setSelectedCategoryId(advert.data.categoryId)
+          setPriceFree(advert.data.price === 0)
+          if (filters.status === 200) {
+            setFilterValues(filters.data.map(x => ({ id: x.id, filterId: x.filterId }) as FilterData))
+          }
+
+          if (images.status === 200) {
+            setFiles(images.data
+              .sort((a: ImageModel, b: ImageModel) => { return a.priority - b.priority })
+              .map(x => ({ url: imagesUrl + "/1200_" + x.name, originFileObj: new File([new Blob([''])], x.name, { type: 'old-image' }) }) as UploadFile))
+          }
+
+          const areaCities = await cityService.getByAreaId(advert.data.areaId)
+          if (areaCities.status === 200) {
+            var cities = areaCities.data.map(x => ({ id: x.id, value: x.id, title: x.name, selectable: true, pId: advert.data.areaId, key: x.id }))
+            setTreeElements([...treeElements, ...cities]);
+          }
+        } else{
+          setError(true)
+        }
+         
+      } else if(id !== 0){
+        setError(true)
       }
-      setError(isNaN(id) || areas.status !== 200)
       setLoading(false)
 
     })()
@@ -63,36 +88,6 @@ const CreateAdvert: React.FC = () => {
     }
   }, [id])
 
-  const setAdvertData = async () => {
-    const [images, filters, advert] = await Promise.all([
-      advertService.getImages(id),
-      filterService.getAdvertFilterValues(id),
-      advertService.getById(id),
-    ]);
-
-    if (advert?.status === 200) {
-      setEditAdvert(advert.data)
-      setSelectedCategoryId(advert.data.categoryId)
-      setPriceFree(advert.data.price === 0)
-      if (filters.status === 200) {
-        setFilterValues(filters.data.map(x => ({ id: x.id, filterId: x.filterId }) as FilterData))
-      }
-
-      if (images.status === 200) {
-        setFiles(images.data
-          .sort((a: ImageModel, b: ImageModel) => { return a.priority - b.priority })
-          .map(x => ({ url: imagesUrl + "/1200_" + x.name, originFileObj: new File([new Blob([''])], x.name, { type: 'old-image' }) }) as UploadFile))
-      }
-
-      const areaCities = await cityService.getByAreaId(advert.data.areaId)
-      if (areaCities.status === 200) {
-        var cities = areaCities.data.map(x => ({ id: x.id, value: x.id, title: x.name, selectable: true, pId: advert.data.areaId, key: x.id }))
-        setTreeElements([...treeElements, ...cities]);
-      }
-    } else {
-      setError(true)
-    }
-  }
 
   const onFinish = async (advert: AdvertCreationModel) => {
     setPublishing(true);
